@@ -1,0 +1,71 @@
+#!/usr/bin/env node
+
+import { fileURLToPath } from 'node:url'
+import { parseArgs } from 'node:util'
+import path from 'node:path'
+import fs from 'node:fs/promises'
+
+import WebSocket from 'ws'
+
+import { Client } from '../client.js'
+
+const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
+const args = parseArgs({
+  args: process.argv.slice(2),
+  strict: false,
+  allowPositionals: true,
+  options: {
+    help: { short: 'h', type: 'boolean' },
+    version: { short: 'V', type: 'boolean' },
+
+    encoding: { short: 'e', type: 'string' },
+    format: { short: 'f', type: 'string' },
+    origin: { short: 'o', type: 'string' },
+    key: { short: 'k', type: 'string' },
+    id: { short: 'i', type: 'string' }
+  }
+})
+
+if (args.values.help) {
+  console.log('usage: conduit [-h|--help]')
+  console.log('usage: conduit [-V|--version]')
+  console.log('usage: conduit --key <key> --origin <origin> [--id <id>] <command> [...options]')
+  process.exit(0)
+}
+
+if (args.values.version) {
+  const { version } = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'))
+  console.log(version)
+  process.exit(0)
+}
+
+const { id, key, origin, format, encoding } = args.values
+const [command] = args.positionals
+
+const options = Object.assign({}, args.values)
+
+delete options.encoding
+delete options.format
+delete options.origin
+delete options.key
+delete options.id
+
+const client = await Client.connect({ WebSocket, origin, key, id })
+
+// @ts-ignore
+const result = await client.call(command, options)
+if (ArrayBuffer.isView(result)) {
+  if (typeof encoding === 'string') {
+    // @ts-ignore
+    process.stdout.write(Buffer.from(result).toString(encoding))
+  } else {
+    // @ts-ignore
+    process.stdout.write(Buffer.from(result))
+  }
+} else if (format === 'json') {
+  process.stdout.write(JSON.stringify(result))
+} else {
+  console.log(result)
+}
+
+await client?.close()

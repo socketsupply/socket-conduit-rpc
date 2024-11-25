@@ -1,0 +1,40 @@
+{
+  "name": "@socketsupply/socket-conduit-rpc",
+  "version": "0.0.1",
+  "description": "A RPC client for connecting to a Socket Runtime application conduit.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "keywords": [
+    "socket",
+    "runtime",
+    "conduit",
+    "websocket",
+    "client",
+    "rpc",
+    "ipc"
+  ],
+  "author": "Joseph Werle <joseph@socketsupply.co>",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.3",
+    "standard": "^17.1.2"
+  },
+  "directories": {
+    "example": "example",
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/socketsupply/socket-conduit-rpc.git"
+  },
+  "bugs": {
+    "url": "https://github.com/socketsupply/socket-conduit-rpc/issues"
+  },
+  "homepage": "https://github.com/socketsupply/socket-conduit-rpc#readme"
+}
