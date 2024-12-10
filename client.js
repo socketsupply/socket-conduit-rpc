@@ -2,7 +2,7 @@ const decoder = new TextDecoder()
 const encoder = new TextEncoder()
 
 /**
- * @typedef {InitEvent & { client?: Client }} ClientEventOptions
+ * @typedef {EventInit & { client?: Client }} ClientEventOptions
  * @typedef {ClientEventOptions & { error?: Error }} ClientErrorEventOptions
  */
 
@@ -73,6 +73,7 @@ export class ClientMessageEvent extends ClientEvent {
    * @type {T|null}
    */
   get data () {
+    // @ts-ignore
     return this.#data ?? null
   }
 }
@@ -82,7 +83,7 @@ export class ClientMessageEvent extends ClientEvent {
  *   id?: number,
  *   key: string,
  *   origin: string,
- *   WebSocket?: new (string|URL): WebSocket
+ *   WebSocket?: (function(string):WebSocket)
  * }} ClientConnectOptions
  */
 
@@ -91,7 +92,7 @@ export class Client extends EventTarget {
    * @return {number}
    */
   static id () {
-    return globalThis.crypto.getRandomValues(new Uint32Array(1))[0]
+    return globalThis.crypto.getRandomValues(new Uint32Array(1))[0] ?? 0
   }
 
   /**
@@ -103,7 +104,7 @@ export class Client extends EventTarget {
     const {
       WebSocket = globalThis.WebSocket,
       origin,
-      key,
+      key
     } = options
 
     const id = options.id || Client.id()
@@ -125,7 +126,7 @@ export class Client extends EventTarget {
       })
     } catch (err) {
       if (typeof callback === 'function') {
-        callback(err)
+        callback(err, undefined)
         return
       }
 
@@ -255,6 +256,7 @@ export class Client extends EventTarget {
       options.value = encodeURIComponent(options.value)
     }
 
+    // @ts-ignore
     this.send({ route: command, token, 'ipc-token': token, ...options }, payload)
     return await new Promise((resolve, reject) => {
       this.addEventListener('message', function onMessage (e) {
@@ -291,6 +293,7 @@ export class Client extends EventTarget {
     this.#socket.addEventListener('error', (e) => {
       this.dispatchEvent(new ClientErrorEvent('error', {
         client: this,
+        // @ts-ignore
         error: e.error
       }))
     })
@@ -314,6 +317,7 @@ export class Client extends EventTarget {
         const data = ArrayBuffer.isView(event.data)
           ? event.data
           : new Uint8Array(await event.data?.arrayBuffer?.() ?? 0)
+        // @ts-ignore
         decoded = decodeMessage(data)
       } catch (err) {
         console.log(err)

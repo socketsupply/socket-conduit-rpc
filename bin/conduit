@@ -51,9 +51,18 @@ delete options.key
 delete options.id
 
 const client = await Client.connect({ WebSocket, origin, key, id })
+const buffer = []
+
+if (!process.stdin.isTTY) {
+  await new Promise((resolve) => {
+    // @ts-ignore
+    process.stdin.on('data', (data) => buffer.push(data))
+    process.stdin.on('end', resolve)
+  })
+}
 
 // @ts-ignore
-const result = await client.call(command, options)
+const result = await client.call(command, options, Buffer.concat(buffer))
 if (ArrayBuffer.isView(result)) {
   if (typeof encoding === 'string') {
     // @ts-ignore
