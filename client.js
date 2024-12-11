@@ -233,7 +233,8 @@ export class Client extends EventTarget {
       payload = new Uint8Array(0)
     }
 
-    this.#socket.send(encodeMessage(options, payload))
+    const message = encodeMessage(options, payload)
+    this.#socket.send(message)
   }
 
   /**
@@ -256,8 +257,20 @@ export class Client extends EventTarget {
       options.value = encodeURIComponent(options.value)
     }
 
+    if (ArrayBuffer.isView(payload)) {
+      let size = 0
+      const buffers = splitBuffer(payload, 1024)
+      for (const buffer of buffers) {
+        size += buffer.byteLength
+        console.log({buffer})
+        this.send({}, buffer)
+      }
+      console.log({ size, payload })
+    }
+
+
     // @ts-ignore
-    this.send({ route: command, token, 'ipc-token': token, ...options }, payload)
+    this.send({ route: command, token, 'ipc-token': token, ...options })
     return await new Promise((resolve, reject) => {
       this.addEventListener('message', function onMessage (e) {
         if (e.data.options.token === token) {
@@ -442,3 +455,20 @@ export async function connect (options, callback = null) {
 }
 
 export default Client
+
+export function splitBuffer (buffer, highWaterMark) {
+  const buffers = []
+
+  buffer = Uint8Array.from(buffer)
+
+  do {
+    buffers.push(buffer.slice(0, highWaterMark))
+    buffer = buffer.slice(highWaterMark)
+  } while (buffer.length > highWaterMark)
+
+  if (buffer.length) {
+    buffers.push(buffer)
+  }
+
+  return buffers
+}

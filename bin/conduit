@@ -61,20 +61,24 @@ if (!process.stdin.isTTY) {
   })
 }
 
-// @ts-ignore
-const result = await client.call(command, options, Buffer.concat(buffer))
-if (ArrayBuffer.isView(result)) {
-  if (typeof encoding === 'string') {
-    // @ts-ignore
-    process.stdout.write(Buffer.from(result).toString(encoding))
+try {
+  // @ts-ignore
+  const result = await client.call(command, options, Buffer.concat(buffer))
+  if (ArrayBuffer.isView(result)) {
+    if (typeof encoding === 'string') {
+      // @ts-ignore
+      process.stdout.write(Buffer.from(result).toString(encoding))
+    } else {
+      // @ts-ignore
+      process.stdout.write(Buffer.from(result))
+    }
+  } else if (format === 'json') {
+    process.stdout.write(JSON.stringify(result))
   } else {
-    // @ts-ignore
-    process.stdout.write(Buffer.from(result))
+    console.log(result)
   }
-} else if (format === 'json') {
-  process.stdout.write(JSON.stringify(result))
-} else {
-  console.log(result)
+} catch (err) {
+  console.error(err.message)
 }
 
 await client?.close()
