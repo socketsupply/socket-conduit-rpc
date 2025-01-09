@@ -39,6 +39,12 @@ if (args.values.version) {
   process.exit(0)
 }
 
+process.on('uncaughtException', (e) => {
+  // @ts-ignore
+  console.error(e.error)
+  process.exit(1)
+})
+
 const { id, key, origin, format, encoding } = args.values
 const [command] = args.positionals
 

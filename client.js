@@ -1,3 +1,5 @@
+import { sha1 } from './crypto.js'
+
 const decoder = new TextDecoder()
 const encoder = new TextEncoder()
 
@@ -258,14 +260,22 @@ export class Client extends EventTarget {
     }
 
     if (ArrayBuffer.isView(payload)) {
-      let size = 0
       const buffers = splitBuffer(payload, 1024)
       for (const buffer of buffers) {
-        size += buffer.byteLength
-        console.log({buffer})
-        this.send({}, buffer)
+        if (buffer.byteLength === 0) {
+          continue
+        }
+        const digest = await sha1(buffer, 'hex')
+        this.send({ digest }, buffer)
+        await new Promise((resolve) => {
+          this.addEventListener('message', function onMessage (e) {
+            if (e.data.options.digest === digest) {
+              this.removeEventListener('message', onMessage)
+              resolve(undefined)
+            }
+          })
+        })
       }
-      console.log({ size, payload })
     }
 
 
