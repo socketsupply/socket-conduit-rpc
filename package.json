@@ -1,6 +1,6 @@
 {
   "name": "@socketsupply/socket-conduit-rpc",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A RPC client for connecting to a Socket Runtime application conduit.",
   "main": "index.js",
   "type": "module",
