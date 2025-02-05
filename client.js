@@ -6,12 +6,49 @@ const encoder = new TextEncoder()
 /**
  * @typedef {EventInit & { client?: Client }} ClientEventOptions
  * @typedef {ClientEventOptions & { error?: Error }} ClientErrorEventOptions
+ * @typedef {ClientEventOptions & { code: number, reason: string, wasClean: boolean }} ClientCloseEventOptions
  */
 
 /**
  * @template T
  * @typedef {ClientEventOptions & { data?: { options: {} & T, payload: Uint8Array }}} ClientMessageEventOptions
  */
+
+/**
+ * @typedef {{ code?: number, reason?: string }} ClientErrorOptions
+ */
+
+export class ClientError extends Error {
+  #code = 0
+  #reason = ''
+
+  /**
+   * @param {string} message
+   * @param {ClientErrorOptions=} [options]
+   */
+  constructor (message, options = null) {
+    super(message, options)
+    this.#code = options?.code || 0
+    this.#reason = message
+  }
+
+  set code (code) {
+    this.#code = code
+  }
+
+  get code () {
+    return this.#code
+  }
+
+  set reason (reason) {
+    this.#reason = reason
+    this.message = reason
+  }
+
+  get reason () {
+    return this.#reason
+  }
+}
 
 export class ClientEvent extends Event {
   #client
@@ -34,7 +71,54 @@ export class ClientEvent extends Event {
 }
 
 export class ClientOpenEvent extends ClientEvent {}
-export class ClientCloseEvent extends ClientEvent {}
+export class ClientCloseEvent extends ClientEvent {
+  /**
+   * @type {number}
+   */
+  #code = 0
+
+  /**
+   * @type {string}
+   */
+  #reason = ''
+
+  /**
+   * @type {boolean}
+   */
+  #wasClean = true
+
+  /**
+   * @param {string} type
+   * @param {ClientCloseEventOptions=} [options]
+   */
+  constructor (type, options) {
+    super(type, options)
+    this.#code = options.code
+    this.#reason = options.reason
+    this.#wasClean = options.wasClean
+  }
+
+  /**
+   * @type {number}
+   */
+  get code () {
+    return this.#code
+  }
+
+  /**
+   * @type {string}
+   */
+  get reason () {
+    return this.#reason
+  }
+
+  /**
+   * @type {boolean}
+   */
+  get wasClean () {
+    return this.#wasClean
+  }
+}
 
 export class ClientErrorEvent extends ClientEvent {
   #error
@@ -158,6 +242,11 @@ export class Client extends EventTarget {
   #origin
 
   /**
+   * @type {ClientError|null}
+   */
+  #error = null
+
+  /**
    * @type {string}
    */
   #key
@@ -183,6 +272,10 @@ export class Client extends EventTarget {
 
   get socket () {
     return this.#socket
+  }
+
+  get error () {
+    return this.#error
   }
 
   get origin () {
@@ -278,7 +371,6 @@ export class Client extends EventTarget {
       }
     }
 
-
     // @ts-ignore
     this.send({ route: command, token, 'ipc-token': token, ...options })
     return await new Promise((resolve, reject) => {
@@ -313,23 +405,45 @@ export class Client extends EventTarget {
       id: this.#id
     })
 
+    let opened = false
+
     this.#socket.addEventListener('error', (e) => {
-      this.dispatchEvent(new ClientErrorEvent('error', {
-        client: this,
-        // @ts-ignore
-        error: e.error
-      }))
+      this.#error = new ClientError('An unknown error occured', {
+        cause: e.error
+      })
+
+      if (!opened) {
+        this.dispatchEvent(new ClientErrorEvent('error', {
+          client: this,
+          // @ts-ignore
+          error: this.#error
+        }))
+      }
     })
 
     this.#socket.addEventListener('open', () => {
+      opened = true
       this.dispatchEvent(new ClientOpenEvent('open', {
         client: this
       }))
     })
 
-    this.#socket.addEventListener('close', () => {
+    this.#socket.addEventListener('close', (e) => {
+      if (opened && this.#error) {
+        this.#error.code = e.code
+        this.#error.reason = e.reason
+        this.dispatchEvent(new ClientErrorEvent('error', {
+          client: this,
+          // @ts-ignore
+          error: this.#error
+        }))
+      }
+
       this.dispatchEvent(new ClientCloseEvent('close', {
-        client: this
+        code: e.code,
+        client: this,
+        reason: e.reason,
+        wasClean: e.wasClean
       }))
     })
 
