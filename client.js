@@ -479,7 +479,7 @@ export class Client extends EventTarget {
 }
 
 /**
- * @see {@link https://github.com/socketsupply/socket/blob/master/api/internal/conduit.js}
+ * @see {@link https://github.com/socketsupply/socket/blob/master/api/conduit.js}
  * @param {string} key
  * @param {string} value
  * @return {Uint8Array}
